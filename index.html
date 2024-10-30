@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script src="./index.js"></script>
+    <script>
+      // three tasks, in reverse order of priority
+      scheduler.postTask(() => console.log('bkg 1'), { priority: 'background' })
+      scheduler.postTask(() => console.log('usr-vis 1'), {
+        priority: 'user-visible',
+      })
+      scheduler.postTask(() => console.log('usr-blk 1'), {
+        priority: 'user-blocking',
+      })
+
+      // three more tasks, in reverse order of priority
+      scheduler.postTask(() => console.log('bkg 2'), { priority: 'background' })
+      scheduler.postTask(() => console.log('usr-vis 2'), {
+        priority: 'user-visible',
+      })
+      scheduler.postTask(() => console.log('usr-blk 2'), {
+        priority: 'user-blocking',
+      })
+
+      // Task with default priority: user-visible
+      scheduler.postTask(() => {
+        console.log('usr-vis 3 (default)')
+      })
+
+      const controller = new TaskController({ priority: 'user-blocking' })
+
+      // Listen for 'prioritychange' events on the controller's signal.
+      controller.signal.addEventListener('prioritychange', (event) => {
+        const previousPriority = event.previousPriority
+        const newPriority = event.target.priority
+        console.log(
+          `Priority changed from ${previousPriority} to ${newPriority}.`
+        )
+      })
+
+      // Post task using the controller's signal.
+      // The signal priority sets the initial priority of the task
+      scheduler.postTask(() => console.log('Task 1'), {
+        signal: controller.signal,
+      })
+
+      // Change the priority to 'background' using the controller
+      controller.setPriority('background')
+
+      // Declare a TaskController with default priority
+      const abortTaskController = new TaskController()
+      // Post task passing the controller's signal
+      scheduler
+        .postTask(() => console.log('Task executing'), {
+          signal: abortTaskController.signal,
+        })
+        .then((taskResult) => console.log(`${taskResult}`)) //This won't run!
+        .catch((error) => console.error('Error:', error)) // Log the error
+
+      // Abort the task
+      abortTaskController.abort()
+
+      scheduler
+        .postTask(() => 'Task delayed by 2000ms', { delay: 2000 })
+        .then((taskResult) => console.log(`${taskResult}`))
+      scheduler
+        .postTask(() => 'Next task should complete in about 2000ms', {
+          delay: 1,
+        })
+        .then((taskResult) => console.log(`${taskResult}`))
+        console.log(1)
+    </script>
+     <script type="module" src="./test.js"></script>
+    <script type="module">
+      console.log(2)
+      function doWork(value) {
+        console.log(`work chunk ${value}`)
+      }
+
+      const workList = [0, 1, 2, 3, 4]
+
+      for (const work of workList) {
+        doWork(work)
+        await scheduler.yield()
+      }
+    </script>
+    <script>
+      console.log(3)
+    </script>
+   
+  </body>
+</html>
